@@ -1,0 +1,10 @@
+# First make sure ROOT is setup
+git clone git@github.com:LLRCMS/HGCAL-PileupMixing.git PileupMixing
+cd PileupMixing/
+make
+./mixing.exe run/mixElectronGun_200PU.config
+
+## Running on batch (LLR t3)
+## The config file (see mixElectronGun_200PU.py) should be changed according to needs before
+cd run/batch/
+python mixElectronGun_200PU.py
