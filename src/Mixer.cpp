@@ -169,6 +169,7 @@ void Mixer::overlapHits(HGCSimEvent& event)
         detid |= (event.hit_sec[h]<<13); // 6 bits
         int layer = (event.hit_layer[h]>=0 ? event.hit_layer[h] : event.hit_layer[h]+63);
         detid |= (layer<<19); // 5 bits
+        detid |= (event.hit_type[h]<<24); // 2 bits
         auto itrHit = m_hits.find(detid);
         if(itrHit==m_hits.end())
         {

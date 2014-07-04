@@ -14,6 +14,7 @@ class BatchJobs:
         self.tree = "hgcSimHitsAnalyzer/HGC"
         self.outpuDir = ""
         self.eventsPerJob = 100
+        self.nEvents = -1
         self.nPileup = 200
         self.nJobs = 0
 
@@ -31,6 +32,8 @@ class BatchJobs:
         tree = inputFile.Get(self.tree)
         tree.__class__ = ROOT.TTree
         nEvents = tree.GetEntries()
+        if self.nEvents!=-1:
+            nEvents = min(nEvents, self.nEvents)
         inputFile.Close()
         self.nJobs = nEvents/self.eventsPerJob
         if nEvents%self.eventsPerJob!=0: self.nJobs += 1
