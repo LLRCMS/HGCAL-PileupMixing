@@ -402,4 +402,17 @@ void Mixer::branch()
     m_outputTree->Branch("hit_phi"   ,  m_mixedEvent.hit_phi   , "hit_phi[nhits]/F");
     m_outputTree->Branch("hit_edep"  ,  m_mixedEvent.hit_edep  , "hit_edep[nhits]/F");
     m_outputTree->Branch("hit_avgt"  ,  m_mixedEvent.hit_avgt  , "hit_avgt[nhits]/F");
+
+    m_outputTree->Branch("hard_nhits"     , &m_hardScatterEvent.nhits     , "hard_nhits/I");
+    m_outputTree->Branch("hard_hit_type"  ,  m_hardScatterEvent.hit_type  , "hard_hit_type[nhits]/I");
+    m_outputTree->Branch("hard_hit_layer" ,  m_hardScatterEvent.hit_layer , "hard_hit_layer[nhits]/I");
+    m_outputTree->Branch("hard_hit_sec"   ,  m_hardScatterEvent.hit_sec   , "hard_hit_sec[nhits]/I");
+    m_outputTree->Branch("hard_hit_bin"   ,  m_hardScatterEvent.hit_bin   , "hard_hit_bin[nhits]/I");
+    m_outputTree->Branch("hard_hit_x"     ,  m_hardScatterEvent.hit_x     , "hard_hit_x[nhits]/F");
+    m_outputTree->Branch("hard_hit_y"     ,  m_hardScatterEvent.hit_y     , "hard_hit_y[nhits]/F");
+    m_outputTree->Branch("hard_hit_z"     ,  m_hardScatterEvent.hit_z     , "hard_hit_z[nhits]/F");
+    m_outputTree->Branch("hard_hit_eta"   ,  m_hardScatterEvent.hit_eta   , "hard_hit_eta[nhits]/F");
+    m_outputTree->Branch("hard_hit_phi"   ,  m_hardScatterEvent.hit_phi   , "hard_hit_phi[nhits]/F");
+    m_outputTree->Branch("hard_hit_edep"  ,  m_hardScatterEvent.hit_edep  , "hard_hit_edep[nhits]/F");
+    m_outputTree->Branch("hard_hit_avgt"  ,  m_hardScatterEvent.hit_avgt  , "hard_hit_avgt[nhits]/F");
 }
