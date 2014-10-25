@@ -31,7 +31,6 @@
 #include "ParReader.h"
 
 
-//#define MAXHGCHITSPEREVENT 1000000
 
 class TFile;
 class TChain;
@@ -40,58 +39,58 @@ class TEntryList;
 
 namespace PileupMixing
 {
-    static const int MAXGEN=10000;
-    static const int MAXHIT=10000000;
 
     struct HGCSimEvent 
     { 
-        int   event, lumi, run, nPileup;
-        int   ngen;
-        int   gen_id    [MAXGEN];
-        int   gen_status[MAXGEN];
-        float gen_pt    [MAXGEN];
-        float gen_eta   [MAXGEN];
-        float gen_phi   [MAXGEN];
-        float gen_en    [MAXGEN];
-        int   nhits;
-        int   hit_type  [MAXHIT];
-        int   hit_layer [MAXHIT];
-        int   hit_sec   [MAXHIT];
-        int   hit_bin   [MAXHIT];
-        int   hit_detid [MAXHIT];
-        float hit_edep  [MAXHIT];
-        float hit_avgt  [MAXHIT];
-        float hit_x     [MAXHIT];
-        float hit_y     [MAXHIT];
-        float hit_z     [MAXHIT];
-        float hit_eta   [MAXHIT];
-        float hit_phi   [MAXHIT];
+        int   event, lumi, run, npu;
+        int   gen_n;
+        std::vector<int>   *gen_id    ;
+        std::vector<int>   *gen_status;
+        std::vector<float> *gen_eta   ;
+        std::vector<float> *gen_phi   ;
+        std::vector<float> *gen_pt   ;
+        std::vector<float> *gen_energy;
+        int   hit_n;
+        std::vector<unsigned> *hit_detid ;
+        std::vector<int>      *hit_subdet;
+        std::vector<int>      *hit_cell  ;
+        std::vector<int>      *hit_sector;
+        std::vector<int>      *hit_subsector;
+        std::vector<int>      *hit_layer ;
+        std::vector<float>    *hit_energy;
+        std::vector<float>    *hit_eta   ;
+        std::vector<float>    *hit_phi   ;
+        std::vector<float>    *hit_x     ;
+        std::vector<float>    *hit_y     ;
+        std::vector<float>    *hit_z     ;
+
     } ;
 
     struct HGCSimGen
     {
         int   id ;
         int   status ;
-        float pt   ;
         float eta  ;
         float phi  ;
-        float en   ;
+        float pt  ;
+        float energy;
     } ;
 
     struct HGCSimHit
     {
-        int   type  ;
-        int   layer ;
-        int   sec   ;
-        int   bin   ;
-        int   detid ;
-        float edep  ;
-        float avgt  ;
-        float x     ;
-        float y     ;
-        float z     ;
-        float eta   ;
-        float phi   ;
+        unsigned detid ;
+        int      subdet;
+        int      cell  ;
+        int      sector;
+        int      subsector;
+        int      layer ;
+        float    energy;
+        float    eta   ;
+        float    phi   ;
+        float    x     ;
+        float    y     ;
+        float    z     ;
+
     } ;
 
     class Mixer
@@ -121,7 +120,7 @@ namespace PileupMixing
             ParReader m_reader;
             TRandom3 m_random;
             std::set<Long64_t> m_mixedEvents;
-            std::map<int, HGCSimHit> m_hits;
+            std::map<unsigned, HGCSimHit> m_hits;
             std::vector<HGCSimGen> m_gens;
 
             // tree variables

@@ -1,4 +1,5 @@
 import os
+import shutil
 import subprocess
 import stat
 import sys
@@ -17,7 +18,9 @@ class BatchJobs:
         self.nEvents = -1
         self.nPileup = 200
         self.nJobs = 0
+        self.randomSeed = 739397
 
+        self.scram_arch = "slc6_amd64_gcc472"
         self.cmsswDir = "/home/llr/cms/sauvan/CMSSW/EmptyArea/CMSSW_5_3_5/"
         self.cwd = os.getcwd()
         self.queue = "cms"
@@ -28,6 +31,7 @@ class BatchJobs:
             os.makedirs(self.outputDir+"/jobs/")
         if not os.path.exists(self.outputDir+"/logs/"):
             os.makedirs(self.outputDir+"/logs/")
+        os.symlink(os.getcwd()+"/../../obj/", self.outputDir+"/obj")
         inputFile = ROOT.TFile.Open(self.hardScatterFile)
         tree = inputFile.Get(self.tree)
         tree.__class__ = ROOT.TTree
@@ -48,18 +52,21 @@ class BatchJobs:
                 print >>config, "FirstEntry: {0}".format(firstEntry)
                 print >>config, "LastEntry: {0}".format(lastEntry)
                 print >>config, "NPileup: {0}".format(self.nPileup)
+                print >>config, "RandomSeed: {0}".format(self.randomSeed+101*job)
 
 
     def createScripts(self):
         for job in range(0,self.nJobs):
             with open(self.outputDir+"/jobs/{0}_{1}.sub".format(self.name,job), 'w') as script:
                 print >>script, "#! /bin/sh"
-                print >>script, "export SCRAM_ARCH=slc6_amd64_gcc472"
-                print >>script, "source /opt/exp_soft/cms/cmsset_default.sh "
+                print >>script, "uname -a"
+                print >>script, "export SCRAM_ARCH={0}".format(self.scram_arch)
+                print >>script, "source /cvmfs/cms.cern.ch/cmsset_default.sh "
                 print >>script, "cd "+self.cmsswDir+"/src/"
                 print >>script, "cmsenv"
                 print >>script, "cd", self.outputDir
                 print >>script, "\necho Executing job"
+                print >>script, "export X509_USER_PROXY="+os.environ["HOME"]+"/.t3/proxy.cert"
                 print >>script, self.cwd+"/../../mixing.exe","jobs/{0}_{1}.config".format(self.name,job) , "&>", "logs/{0}_{1}.log".format(self.name,job)
 
 

@@ -25,6 +25,7 @@
 #include <TFile.h>
 #include <TChain.h>
 #include <TRandom3.h>
+#include "TSystem.h"
 
 #include "Mixer.h"
 #include "Utilities.h"
@@ -55,6 +56,8 @@ Mixer::~Mixer()
 bool Mixer::initialize(const std::string& parameterFile)
 /*****************************************************************/
 {
+    gSystem->Load("obj/libDictionary_C.so");
+
     // read configuration
     m_reader.read(parameterFile);
 
@@ -115,12 +118,6 @@ void Mixer::loop()
         //}
         m_mixedEvents.insert(entry);
         m_hardScatterChain->GetEntry(entry);
-        if(m_hardScatterEvent.nhits>=MAXHIT)
-        {
-            stringstream error;
-            error << "ERROR: number of hits in hard scatter event larger than MAXHIT ("<<MAXHIT<<")";
-            throw string(error.str());
-        }
 
         overlapHits(m_hardScatterEvent);
         overlapGen(m_hardScatterEvent);
@@ -135,7 +132,7 @@ void Mixer::mix()
 /*****************************************************************/
 {
     int nPileup = m_random.Poisson(m_reader.nPileup());
-    m_mixedEvent.nPileup = nPileup;
+    m_mixedEvent.npu = nPileup;
     for (Long64_t evt=0;evt<nPileup;evt++)
     {
         Long64_t mbEvent = (Long64_t)m_random.Integer(m_nEntriesMinBias);
@@ -146,12 +143,6 @@ void Mixer::mix()
         }
         m_mixedEvents.insert(mbEvent);
         m_minBiasChain->GetEntry(mbEvent);
-        if(m_minBiasEvent.nhits>=MAXHIT)
-        {
-            stringstream error;
-            error << "ERROR: number of hits in minbias event larger than MAXHIT ("<<MAXHIT<<")";
-            throw string(error.str());
-        }
         overlapHits(m_minBiasEvent);
     }
 }
@@ -161,45 +152,35 @@ void Mixer::mix()
 void Mixer::overlapHits(HGCSimEvent& event)
 /*****************************************************************/
 {
-    int nHits = event.nhits;
+    int nHits = event.hit_n;
     for(int h=0; h<nHits; h++)
     {
-        int detid = 0;
-        detid |= event.hit_bin[h]; // 13 bits
-        detid |= (event.hit_sec[h]<<13); // 6 bits
-        int layer = (event.hit_layer[h]>=0 ? event.hit_layer[h] : event.hit_layer[h]+63);
-        detid |= (layer<<19); // 5 bits
-        detid |= (event.hit_type[h]<<24); // 2 bits
+        unsigned detid = event.hit_detid->at(h);
         auto itrHit = m_hits.find(detid);
         if(itrHit==m_hits.end())
         {
             // create new hit
             HGCSimHit hit;
-            hit.type  = event.hit_type[h];
-            hit.layer = event.hit_layer[h];
-            hit.sec   = event.hit_sec[h];
-            hit.bin   = event.hit_bin[h];
-            hit.detid = detid;
-            hit.edep  = event.hit_edep[h];
-            hit.avgt  = event.hit_avgt[h];
-            hit.x     = event.hit_x[h];
-            hit.y     = event.hit_y[h];
-            hit.z     = event.hit_z[h];
-            hit.eta   = event.hit_eta[h];
-            hit.phi   = event.hit_phi[h];
+            hit.detid     = detid;
+            hit.cell      = event.hit_cell->at(h);
+            hit.subdet    = event.hit_subdet->at(h);
+            hit.sector    = event.hit_sector->at(h);
+            hit.subsector = event.hit_subsector->at(h);
+            hit.layer     = event.hit_layer->at(h);
+            hit.energy    = event.hit_energy->at(h);
+            hit.eta       = event.hit_eta->at(h);
+            hit.phi       = event.hit_phi->at(h);
+            hit.x         = event.hit_x->at(h);
+            hit.y         = event.hit_y->at(h);
+            hit.z         = event.hit_z->at(h);
+
             m_hits[detid] = hit;
         }
         else
         {
-
             // sum hit energy. 
-            // FIXME: What to do with avgt??
             HGCSimHit& hit = itrHit->second;
-            //cerr<<"Summing hit energy for 0x"<<hex<<detid<<"\n";
-            //cerr<<" layer="<<hit.layer<<",sec="<<hit.sec<<",bin="<<hit.bin<<"\n";
-            //cerr<<" E="<<hit.edep<<"\n";
-            hit.edep += event.hit_edep[h];
-            //cerr<<" -> E="<<hit.edep<<"\n";
+            hit.energy += event.hit_energy->at(h);
         }
     }
 }
@@ -208,17 +189,17 @@ void Mixer::overlapHits(HGCSimEvent& event)
 void Mixer::overlapGen(HGCSimEvent& event)
 /*****************************************************************/
 {
-    int nGen = event.ngen;
+    int nGen = event.gen_n;
     for(int g=0; g<nGen; g++)
     {
         // create new gen
         HGCSimGen gen;
-        gen.id     = event.gen_id[g];
-        gen.status = event.gen_status[g];
-        gen.pt     = event.gen_pt[g];
-        gen.eta    = event.gen_eta[g];
-        gen.phi    = event.gen_phi[g];
-        gen.en     = event.gen_en[g];
+        gen.id     = event.gen_id->at(g);
+        gen.status = event.gen_status->at(g);
+        gen.eta    = event.gen_eta->at(g);
+        gen.phi    = event.gen_phi->at(g);
+        gen.pt     = event.gen_pt->at(g);
+        gen.energy = event.gen_energy->at(g);
         m_gens.push_back(gen);
     }
 }
@@ -231,51 +212,60 @@ void Mixer::fill()
     m_mixedEvent.run   = m_hardScatterEvent.run;
     m_mixedEvent.event = m_hardScatterEvent.event;
     m_mixedEvent.lumi  = m_hardScatterEvent.lumi;
-    m_mixedEvent.nhits = 0;
-    m_mixedEvent.ngen  = 0;
-    if((int)m_hits.size()>=MAXHIT)
-    {
-        stringstream error;
-        error << "ERROR: number of output hits larger than MAXHIT ("<<m_hits.size()<<")";
-        throw string(error.str());
-    }
+    m_mixedEvent.hit_n = 0;
+    m_mixedEvent.gen_n = 0;
+
     for(auto itrHit=m_hits.begin(); itrHit!=m_hits.end(); ++itrHit)
     {
         const HGCSimHit& hit = itrHit->second;
-        int n = m_mixedEvent.nhits;
 
-        m_mixedEvent.nhits++;
-        m_mixedEvent.hit_type[n]  = hit.type;
-        m_mixedEvent.hit_sec[n]   = hit.sec;
-        m_mixedEvent.hit_layer[n] = hit.layer;
-        m_mixedEvent.hit_bin[n]   = hit.bin;
-        m_mixedEvent.hit_detid[n] = hit.detid;
-        m_mixedEvent.hit_edep[n]  = hit.edep;
-        m_mixedEvent.hit_avgt[n]  = hit.avgt;
-        m_mixedEvent.hit_x[n]     = hit.x;
-        m_mixedEvent.hit_y[n]     = hit.y;
-        m_mixedEvent.hit_z[n]     = hit.z;
-        m_mixedEvent.hit_eta[n]   = hit.eta;
-        m_mixedEvent.hit_phi[n]   = hit.phi;
+        m_mixedEvent.hit_n++;
+        m_mixedEvent.hit_detid    ->push_back(hit.detid);
+        m_mixedEvent.hit_cell     ->push_back(hit.cell);
+        m_mixedEvent.hit_subdet   ->push_back(hit.subdet);
+        m_mixedEvent.hit_sector   ->push_back(hit.sector);
+        m_mixedEvent.hit_subsector->push_back(hit.subsector);
+        m_mixedEvent.hit_layer    ->push_back(hit.layer);
+        m_mixedEvent.hit_energy   ->push_back(hit.energy);
+        m_mixedEvent.hit_eta      ->push_back(hit.eta);
+        m_mixedEvent.hit_phi      ->push_back(hit.phi);
+        m_mixedEvent.hit_x        ->push_back(hit.x);
+        m_mixedEvent.hit_y        ->push_back(hit.y);
+        m_mixedEvent.hit_z        ->push_back(hit.z);
+
     }
-    if((int)m_gens.size()>=MAXGEN)
-    {
-        stringstream error;
-        error << "ERROR: number of output gen particles larger than MAXGEN ("<<m_gens.size()<<")";
-        throw string(error.str());
-    }
+    m_mixedEvent.hit_detid    ->resize(m_mixedEvent.hit_n);
+    m_mixedEvent.hit_cell     ->resize(m_mixedEvent.hit_n);
+    m_mixedEvent.hit_subdet   ->resize(m_mixedEvent.hit_n);
+    m_mixedEvent.hit_sector   ->resize(m_mixedEvent.hit_n);
+    m_mixedEvent.hit_subsector->resize(m_mixedEvent.hit_n);
+    m_mixedEvent.hit_layer    ->resize(m_mixedEvent.hit_n);
+    m_mixedEvent.hit_energy   ->resize(m_mixedEvent.hit_n);
+    m_mixedEvent.hit_eta      ->resize(m_mixedEvent.hit_n);
+    m_mixedEvent.hit_phi      ->resize(m_mixedEvent.hit_n);
+    m_mixedEvent.hit_x        ->resize(m_mixedEvent.hit_n);
+    m_mixedEvent.hit_y        ->resize(m_mixedEvent.hit_n);
+    m_mixedEvent.hit_z        ->resize(m_mixedEvent.hit_n);
+
+
     for(auto itrGen=m_gens.begin(); itrGen!=m_gens.end(); ++itrGen)
     {
         const HGCSimGen& gen = *itrGen;
-        int n = m_mixedEvent.ngen;
-        m_mixedEvent.ngen++;
-        m_mixedEvent.gen_id[n]     = gen.id;
-        m_mixedEvent.gen_status[n] = gen.status;
-        m_mixedEvent.gen_pt[n]     = gen.pt;
-        m_mixedEvent.gen_eta[n]    = gen.eta;
-        m_mixedEvent.gen_phi[n]    = gen.phi;
-        m_mixedEvent.gen_en[n]     = gen.en;
+        m_mixedEvent.gen_n++;
+        m_mixedEvent.gen_id    ->push_back(gen.id);
+        m_mixedEvent.gen_status->push_back(gen.status);
+        m_mixedEvent.gen_eta   ->push_back(gen.eta);
+        m_mixedEvent.gen_phi   ->push_back(gen.phi);
+        m_mixedEvent.gen_pt    ->push_back(gen.pt);
+        m_mixedEvent.gen_energy->push_back(gen.energy);
     }
+    m_mixedEvent.gen_id    ->resize(m_mixedEvent.gen_n);
+    m_mixedEvent.gen_status->resize(m_mixedEvent.gen_n);
+    m_mixedEvent.gen_eta   ->resize(m_mixedEvent.gen_n);
+    m_mixedEvent.gen_phi   ->resize(m_mixedEvent.gen_n);
+    m_mixedEvent.gen_pt    ->resize(m_mixedEvent.gen_n);
+    m_mixedEvent.gen_energy->resize(m_mixedEvent.gen_n);
+
     m_outputTree->Fill();
 }
 
@@ -290,32 +280,27 @@ void Mixer::clean()
     m_mixedEvent.event = 0;
     m_mixedEvent.lumi  = 0;
     m_mixedEvent.run   = 0;
-    m_mixedEvent.ngen  = 0;
-    m_mixedEvent.nhits = 0;
-    for(int n=0;n<MAXGEN;n++)
-    {
-        m_mixedEvent.gen_id[n]     = 0;
-        m_mixedEvent.gen_status[n] = 0;
-        m_mixedEvent.gen_pt[n]     = 0;
-        m_mixedEvent.gen_eta[n]    = 0;
-        m_mixedEvent.gen_phi[n]    = 0;
-        m_mixedEvent.gen_en[n]     = 0;
-    }
-    for(int n=0;n<MAXHIT;n++)
-    {
-        m_mixedEvent.hit_type[n]  = 0;
-        m_mixedEvent.hit_sec[n]   = 0;
-        m_mixedEvent.hit_layer[n] = 0;
-        m_mixedEvent.hit_bin[n]   = 0;
-        m_mixedEvent.hit_detid[n] = 0;
-        m_mixedEvent.hit_edep[n]  = 0;
-        m_mixedEvent.hit_avgt[n]  = 0;
-        m_mixedEvent.hit_x[n]     = 0;
-        m_mixedEvent.hit_y[n]     = 0;
-        m_mixedEvent.hit_z[n]     = 0;
-        m_mixedEvent.hit_eta[n]   = 0;
-        m_mixedEvent.hit_phi[n]   = 0;
-    }
+    m_mixedEvent.gen_n = 0;
+    m_mixedEvent.hit_n = 0;
+    m_mixedEvent.gen_id    ->clear();
+    m_mixedEvent.gen_status->clear();
+    m_mixedEvent.gen_eta   ->clear();
+    m_mixedEvent.gen_phi   ->clear();
+    m_mixedEvent.gen_pt    ->clear();
+    m_mixedEvent.gen_energy->clear();
+
+    m_mixedEvent.hit_detid    ->clear();
+    m_mixedEvent.hit_subdet   ->clear();
+    m_mixedEvent.hit_cell     ->clear();
+    m_mixedEvent.hit_sector   ->clear();
+    m_mixedEvent.hit_subsector->clear();
+    m_mixedEvent.hit_layer    ->clear();
+    m_mixedEvent.hit_energy   ->clear();
+    m_mixedEvent.hit_x        ->clear();
+    m_mixedEvent.hit_y        ->clear();
+    m_mixedEvent.hit_z        ->clear();
+    m_mixedEvent.hit_eta      ->clear();
+    m_mixedEvent.hit_phi      ->clear();
 }
 
 
@@ -323,96 +308,133 @@ void Mixer::clean()
 void Mixer::branch()
 /*****************************************************************/
 {
+    m_mixedEvent.gen_id        = 0;
+    m_mixedEvent.gen_status    = 0;
+    m_mixedEvent.gen_eta       = 0;
+    m_mixedEvent.gen_phi       = 0;
+    m_mixedEvent.gen_pt        = 0;
+    m_mixedEvent.gen_energy    = 0;
+    //
+    m_mixedEvent.hit_detid     = 0;
+    m_mixedEvent.hit_subdet    = 0;
+    m_mixedEvent.hit_cell      = 0;
+    m_mixedEvent.hit_sector    = 0;
+    m_mixedEvent.hit_subsector = 0;
+    m_mixedEvent.hit_layer     = 0;
+    m_mixedEvent.hit_energy    = 0;
+    m_mixedEvent.hit_x         = 0;
+    m_mixedEvent.hit_y         = 0;
+    m_mixedEvent.hit_z         = 0;
+    m_mixedEvent.hit_eta       = 0;
+    m_mixedEvent.hit_phi       = 0;
+    //
+    m_hardScatterEvent.hit_detid     = 0;
+    m_hardScatterEvent.hit_subdet    = 0;
+    m_hardScatterEvent.hit_cell      = 0;
+    m_hardScatterEvent.hit_sector    = 0;
+    m_hardScatterEvent.hit_subsector = 0;
+    m_hardScatterEvent.hit_layer     = 0;
+    m_hardScatterEvent.hit_energy    = 0;
+    m_hardScatterEvent.hit_x         = 0;
+    m_hardScatterEvent.hit_y         = 0;
+    m_hardScatterEvent.hit_z         = 0;
+    m_hardScatterEvent.hit_eta       = 0;
+    m_hardScatterEvent.hit_phi       = 0;
+
+
     // Hard scatter tree
     m_hardScatterChain->SetBranchAddress("run"       , &m_hardScatterEvent.run);
     m_hardScatterChain->SetBranchAddress("lumi"      , &m_hardScatterEvent.lumi);
     m_hardScatterChain->SetBranchAddress("event"     , &m_hardScatterEvent.event);
 
-    m_hardScatterChain->SetBranchAddress("ngen"      , &m_hardScatterEvent.ngen);
-    m_hardScatterChain->SetBranchAddress("gen_id"    ,  m_hardScatterEvent.gen_id);
-    m_hardScatterChain->SetBranchAddress("gen_status",  m_hardScatterEvent.gen_status);
-    m_hardScatterChain->SetBranchAddress("gen_pt"    ,  m_hardScatterEvent.gen_pt);
-    m_hardScatterChain->SetBranchAddress("gen_eta"   ,  m_hardScatterEvent.gen_eta);
-    m_hardScatterChain->SetBranchAddress("gen_phi"   ,  m_hardScatterEvent.gen_phi);
-    m_hardScatterChain->SetBranchAddress("gen_en"    ,  m_hardScatterEvent.gen_en);
+    m_hardScatterChain->SetBranchAddress("gen_n"     , &m_hardScatterEvent.gen_n);
+    m_hardScatterChain->SetBranchAddress("gen_id"    , &m_hardScatterEvent.gen_id);
+    m_hardScatterChain->SetBranchAddress("gen_status", &m_hardScatterEvent.gen_status);
+    m_hardScatterChain->SetBranchAddress("gen_eta"   , &m_hardScatterEvent.gen_eta);
+    m_hardScatterChain->SetBranchAddress("gen_phi"   , &m_hardScatterEvent.gen_phi);
+    m_hardScatterChain->SetBranchAddress("gen_pt"    , &m_hardScatterEvent.gen_pt);
+    m_hardScatterChain->SetBranchAddress("gen_energy", &m_hardScatterEvent.gen_energy);
 
-    m_hardScatterChain->SetBranchAddress("nhits"     , &m_hardScatterEvent.nhits);
-    m_hardScatterChain->SetBranchAddress("hit_type"  ,  m_hardScatterEvent.hit_type);
-    m_hardScatterChain->SetBranchAddress("hit_layer" ,  m_hardScatterEvent.hit_layer);
-    m_hardScatterChain->SetBranchAddress("hit_sec"   ,  m_hardScatterEvent.hit_sec);
-    m_hardScatterChain->SetBranchAddress("hit_bin"   ,  m_hardScatterEvent.hit_bin);
-    m_hardScatterChain->SetBranchAddress("hit_x"     ,  m_hardScatterEvent.hit_x);
-    m_hardScatterChain->SetBranchAddress("hit_y"     ,  m_hardScatterEvent.hit_y);
-    m_hardScatterChain->SetBranchAddress("hit_z"     ,  m_hardScatterEvent.hit_z);
-    m_hardScatterChain->SetBranchAddress("hit_eta"   ,  m_hardScatterEvent.hit_eta);
-    m_hardScatterChain->SetBranchAddress("hit_phi"   ,  m_hardScatterEvent.hit_phi);
-    m_hardScatterChain->SetBranchAddress("hit_edep"  ,  m_hardScatterEvent.hit_edep);
-    m_hardScatterChain->SetBranchAddress("hit_avgt"  ,  m_hardScatterEvent.hit_avgt);
+    m_hardScatterChain->SetBranchAddress("hit_n"        , &m_hardScatterEvent.hit_n);
+    m_hardScatterChain->SetBranchAddress("hit_detid"    , &m_hardScatterEvent.hit_detid);
+    m_hardScatterChain->SetBranchAddress("hit_cell"     , &m_hardScatterEvent.hit_cell);
+    m_hardScatterChain->SetBranchAddress("hit_subdet"   , &m_hardScatterEvent.hit_subdet);
+    m_hardScatterChain->SetBranchAddress("hit_layer"    , &m_hardScatterEvent.hit_layer);
+    m_hardScatterChain->SetBranchAddress("hit_sector"   , &m_hardScatterEvent.hit_sector);
+    m_hardScatterChain->SetBranchAddress("hit_subsector", &m_hardScatterEvent.hit_subsector);
+    m_hardScatterChain->SetBranchAddress("hit_energy"   , &m_hardScatterEvent.hit_energy);
+    m_hardScatterChain->SetBranchAddress("hit_x"        , &m_hardScatterEvent.hit_x);
+    m_hardScatterChain->SetBranchAddress("hit_y"        , &m_hardScatterEvent.hit_y);
+    m_hardScatterChain->SetBranchAddress("hit_z"        , &m_hardScatterEvent.hit_z);
+    m_hardScatterChain->SetBranchAddress("hit_eta"      , &m_hardScatterEvent.hit_eta);
+    m_hardScatterChain->SetBranchAddress("hit_phi"      , &m_hardScatterEvent.hit_phi);
 
     // Min bias tree
     m_minBiasChain->SetBranchAddress("run"       , &m_minBiasEvent.run);
     m_minBiasChain->SetBranchAddress("lumi"      , &m_minBiasEvent.lumi);
     m_minBiasChain->SetBranchAddress("event"     , &m_minBiasEvent.event);
 
-    m_minBiasChain->SetBranchAddress("ngen"      , &m_minBiasEvent.ngen);
-    m_minBiasChain->SetBranchAddress("gen_id"    ,  m_minBiasEvent.gen_id);
-    m_minBiasChain->SetBranchAddress("gen_status",  m_minBiasEvent.gen_status);
-    m_minBiasChain->SetBranchAddress("gen_pt"    ,  m_minBiasEvent.gen_pt);
-    m_minBiasChain->SetBranchAddress("gen_eta"   ,  m_minBiasEvent.gen_eta);
-    m_minBiasChain->SetBranchAddress("gen_phi"   ,  m_minBiasEvent.gen_phi);
-    m_minBiasChain->SetBranchAddress("gen_en"    ,  m_minBiasEvent.gen_en);
+    m_minBiasChain->SetBranchAddress("gen_n"     , &m_minBiasEvent.gen_n);
+    m_minBiasChain->SetBranchAddress("gen_id"    , &m_minBiasEvent.gen_id);
+    m_minBiasChain->SetBranchAddress("gen_status", &m_minBiasEvent.gen_status);
+    m_minBiasChain->SetBranchAddress("gen_eta"   , &m_minBiasEvent.gen_eta);
+    m_minBiasChain->SetBranchAddress("gen_phi"   , &m_minBiasEvent.gen_phi);
+    m_minBiasChain->SetBranchAddress("gen_pt"    , &m_minBiasEvent.gen_pt);
+    m_minBiasChain->SetBranchAddress("gen_energy", &m_minBiasEvent.gen_energy);
 
-    m_minBiasChain->SetBranchAddress("nhits"     , &m_minBiasEvent.nhits);
-    m_minBiasChain->SetBranchAddress("hit_type"  ,  m_minBiasEvent.hit_type);
-    m_minBiasChain->SetBranchAddress("hit_layer" ,  m_minBiasEvent.hit_layer);
-    m_minBiasChain->SetBranchAddress("hit_sec"   ,  m_minBiasEvent.hit_sec);
-    m_minBiasChain->SetBranchAddress("hit_bin"   ,  m_minBiasEvent.hit_bin);
-    m_minBiasChain->SetBranchAddress("hit_x"     ,  m_minBiasEvent.hit_x);
-    m_minBiasChain->SetBranchAddress("hit_y"     ,  m_minBiasEvent.hit_y);
-    m_minBiasChain->SetBranchAddress("hit_z"     ,  m_minBiasEvent.hit_z);
-    m_minBiasChain->SetBranchAddress("hit_eta"   ,  m_minBiasEvent.hit_eta);
-    m_minBiasChain->SetBranchAddress("hit_phi"   ,  m_minBiasEvent.hit_phi);
-    m_minBiasChain->SetBranchAddress("hit_edep"  ,  m_minBiasEvent.hit_edep);
-    m_minBiasChain->SetBranchAddress("hit_avgt"  ,  m_minBiasEvent.hit_avgt);
+    m_minBiasChain->SetBranchAddress("hit_n"        , &m_minBiasEvent.hit_n);
+    m_minBiasChain->SetBranchAddress("hit_detid"    , &m_minBiasEvent.hit_detid);
+    m_minBiasChain->SetBranchAddress("hit_cell"     , &m_minBiasEvent.hit_cell);
+    m_minBiasChain->SetBranchAddress("hit_subdet"   , &m_minBiasEvent.hit_subdet);
+    m_minBiasChain->SetBranchAddress("hit_layer"    , &m_minBiasEvent.hit_layer);
+    m_minBiasChain->SetBranchAddress("hit_sector"   , &m_minBiasEvent.hit_sector);
+    m_minBiasChain->SetBranchAddress("hit_subsector", &m_minBiasEvent.hit_subsector);
+    m_minBiasChain->SetBranchAddress("hit_energy"   , &m_minBiasEvent.hit_energy);
+    m_minBiasChain->SetBranchAddress("hit_x"        , &m_minBiasEvent.hit_x);
+    m_minBiasChain->SetBranchAddress("hit_y"        , &m_minBiasEvent.hit_y);
+    m_minBiasChain->SetBranchAddress("hit_z"        , &m_minBiasEvent.hit_z);
+    m_minBiasChain->SetBranchAddress("hit_eta"      , &m_minBiasEvent.hit_eta);
+    m_minBiasChain->SetBranchAddress("hit_phi"      , &m_minBiasEvent.hit_phi);
 
     // Output tree
     m_outputTree->Branch("run"       , &m_mixedEvent.run       , "run/I");
     m_outputTree->Branch("lumi"      , &m_mixedEvent.lumi      , "lumi/I");
     m_outputTree->Branch("event"     , &m_mixedEvent.event     , "event/I");
-    m_outputTree->Branch("nPileup"   , &m_mixedEvent.nPileup   , "nPileup/I");
+    m_outputTree->Branch("npu"       , &m_mixedEvent.npu       , "npu/I");
 
-    m_outputTree->Branch("ngen"      , &m_mixedEvent.ngen      , "ngen/I");
-    m_outputTree->Branch("gen_id"    ,  m_mixedEvent.gen_id    , "gen_id[ngen]/I");
-    m_outputTree->Branch("gen_status",  m_mixedEvent.gen_status, "gen_status[ngen]/I");
-    m_outputTree->Branch("gen_pt"    ,  m_mixedEvent.gen_pt    , "gen_pt[ngen]/F");
-    m_outputTree->Branch("gen_eta"   ,  m_mixedEvent.gen_eta   , "gen_eta[ngen]/F");
-    m_outputTree->Branch("gen_phi"   ,  m_mixedEvent.gen_phi   , "gen_phi[ngen]/F");
-    m_outputTree->Branch("gen_en"    ,  m_mixedEvent.gen_en    , "gen_en[ngen]/F");
+    m_outputTree->Branch("gen_n"      , &m_mixedEvent.gen_n      , "gen_n/I");
+    m_outputTree->Branch("gen_id"    ,  &m_mixedEvent.gen_id    );
+    m_outputTree->Branch("gen_status",  &m_mixedEvent.gen_status);
+    m_outputTree->Branch("gen_eta"   ,  &m_mixedEvent.gen_eta   );
+    m_outputTree->Branch("gen_phi"   ,  &m_mixedEvent.gen_phi   );
+    m_outputTree->Branch("gen_pt"    ,  &m_mixedEvent.gen_pt    );
+    m_outputTree->Branch("gen_energy",  &m_mixedEvent.gen_energy);
 
-    m_outputTree->Branch("nhits"     , &m_mixedEvent.nhits     , "nhits/I");
-    m_outputTree->Branch("hit_type"  ,  m_mixedEvent.hit_type  , "hit_type[nhits]/I");
-    m_outputTree->Branch("hit_layer" ,  m_mixedEvent.hit_layer , "hit_layer[nhits]/I");
-    m_outputTree->Branch("hit_sec"   ,  m_mixedEvent.hit_sec   , "hit_sec[nhits]/I");
-    m_outputTree->Branch("hit_bin"   ,  m_mixedEvent.hit_bin   , "hit_bin[nhits]/I");
-    m_outputTree->Branch("hit_detid" ,  m_mixedEvent.hit_detid , "hit_detid[nhits]/I");
-    m_outputTree->Branch("hit_x"     ,  m_mixedEvent.hit_x     , "hit_x[nhits]/F");
-    m_outputTree->Branch("hit_y"     ,  m_mixedEvent.hit_y     , "hit_y[nhits]/F");
-    m_outputTree->Branch("hit_z"     ,  m_mixedEvent.hit_z     , "hit_z[nhits]/F");
-    m_outputTree->Branch("hit_eta"   ,  m_mixedEvent.hit_eta   , "hit_eta[nhits]/F");
-    m_outputTree->Branch("hit_phi"   ,  m_mixedEvent.hit_phi   , "hit_phi[nhits]/F");
-    m_outputTree->Branch("hit_edep"  ,  m_mixedEvent.hit_edep  , "hit_edep[nhits]/F");
-    m_outputTree->Branch("hit_avgt"  ,  m_mixedEvent.hit_avgt  , "hit_avgt[nhits]/F");
+    m_outputTree->Branch("hit_n"        , &m_mixedEvent.hit_n     , "hit_n/I");
+    m_outputTree->Branch("hit_detid"    , &m_mixedEvent.hit_detid);
+    m_outputTree->Branch("hit_subdet"   , &m_mixedEvent.hit_subdet);
+    m_outputTree->Branch("hit_cell"     , &m_mixedEvent.hit_cell   );
+    m_outputTree->Branch("hit_layer"    , &m_mixedEvent.hit_layer );
+    m_outputTree->Branch("hit_sector"   , &m_mixedEvent.hit_sector);
+    m_outputTree->Branch("hit_subsector", &m_mixedEvent.hit_subsector);
+    m_outputTree->Branch("hit_energy"   , &m_mixedEvent.hit_energy);
+    m_outputTree->Branch("hit_x"        , &m_mixedEvent.hit_x     );
+    m_outputTree->Branch("hit_y"        , &m_mixedEvent.hit_y     );
+    m_outputTree->Branch("hit_z"        , &m_mixedEvent.hit_z     );
+    m_outputTree->Branch("hit_eta"      , &m_mixedEvent.hit_eta   );
+    m_outputTree->Branch("hit_phi"      , &m_mixedEvent.hit_phi   );
 
-    m_outputTree->Branch("hard_nhits"     , &m_hardScatterEvent.nhits     , "hard_nhits/I");
-    m_outputTree->Branch("hard_hit_type"  ,  m_hardScatterEvent.hit_type  , "hard_hit_type[nhits]/I");
-    m_outputTree->Branch("hard_hit_layer" ,  m_hardScatterEvent.hit_layer , "hard_hit_layer[nhits]/I");
-    m_outputTree->Branch("hard_hit_sec"   ,  m_hardScatterEvent.hit_sec   , "hard_hit_sec[nhits]/I");
-    m_outputTree->Branch("hard_hit_bin"   ,  m_hardScatterEvent.hit_bin   , "hard_hit_bin[nhits]/I");
-    m_outputTree->Branch("hard_hit_x"     ,  m_hardScatterEvent.hit_x     , "hard_hit_x[nhits]/F");
-    m_outputTree->Branch("hard_hit_y"     ,  m_hardScatterEvent.hit_y     , "hard_hit_y[nhits]/F");
-    m_outputTree->Branch("hard_hit_z"     ,  m_hardScatterEvent.hit_z     , "hard_hit_z[nhits]/F");
-    m_outputTree->Branch("hard_hit_eta"   ,  m_hardScatterEvent.hit_eta   , "hard_hit_eta[nhits]/F");
-    m_outputTree->Branch("hard_hit_phi"   ,  m_hardScatterEvent.hit_phi   , "hard_hit_phi[nhits]/F");
-    m_outputTree->Branch("hard_hit_edep"  ,  m_hardScatterEvent.hit_edep  , "hard_hit_edep[nhits]/F");
-    m_outputTree->Branch("hard_hit_avgt"  ,  m_hardScatterEvent.hit_avgt  , "hard_hit_avgt[nhits]/F");
+    m_outputTree->Branch("hard_hit_n"        , &m_hardScatterEvent.hit_n     , "hard_hit_n/I");
+    m_outputTree->Branch("hard_hit_detid"    , &m_hardScatterEvent.hit_detid  );
+    m_outputTree->Branch("hard_hit_subdet"   , &m_hardScatterEvent.hit_subdet  );
+    m_outputTree->Branch("hard_hit_cell"     , &m_hardScatterEvent.hit_cell   );
+    m_outputTree->Branch("hard_hit_layer"    , &m_hardScatterEvent.hit_layer );
+    m_outputTree->Branch("hard_hit_sector"   , &m_hardScatterEvent.hit_sector   );
+    m_outputTree->Branch("hard_hit_subsector", &m_hardScatterEvent.hit_subsector   );
+    m_outputTree->Branch("hard_hit_energy"   , &m_hardScatterEvent.hit_energy);
+    m_outputTree->Branch("hard_hit_x"        , &m_hardScatterEvent.hit_x     );
+    m_outputTree->Branch("hard_hit_y"        , &m_hardScatterEvent.hit_y     );
+    m_outputTree->Branch("hard_hit_z"        , &m_hardScatterEvent.hit_z     );
+    m_outputTree->Branch("hard_hit_eta"      , &m_hardScatterEvent.hit_eta   );
+    m_outputTree->Branch("hard_hit_phi"      , &m_hardScatterEvent.hit_phi   );
 }

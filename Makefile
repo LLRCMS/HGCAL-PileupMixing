@@ -25,7 +25,7 @@ SRCPP = main.cpp\
 OBJCPP = $(patsubst %.cpp,obj/%.o,$(SRCPP))
 
 
-all : mixing.exe
+all : mixing.exe obj/libDictionary_C.so
 
 obj/%.o : %.cpp
 	@echo "> compiling $*"
@@ -37,6 +37,13 @@ mixing.exe : $(OBJCPP)
 	@$(CC) $^ $(ACLIBS) $(LIBS) $(GLIBS)  -o $@
 
 clean:
+	@echo "> Cleaning dictionary"
+	@rm -f obj/libDictionary_C.so
 	@echo "> Cleaning object files and executable"
 	@rm  -f obj/*.o
 	@rm -f mixing.exe
+
+obj/libDictionary_C.so: ./include/libDictionary.C
+	@echo "> Generating dictionary"
+	@cd include && root -b -q libDictionary.C++
+	@mv ./include/libDictionary_C.so ./obj/
