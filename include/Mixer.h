@@ -57,6 +57,7 @@ namespace PileupMixing
         std::vector<int>      *hit_sector;
         std::vector<int>      *hit_subsector;
         std::vector<int>      *hit_layer ;
+        std::vector<int>      *hit_zside;
         std::vector<float>    *hit_energy;
         std::vector<float>    *hit_eta   ;
         std::vector<float>    *hit_phi   ;
@@ -84,6 +85,7 @@ namespace PileupMixing
         int      sector;
         int      subsector;
         int      layer ;
+        int      zside;
         float    energy;
         float    eta   ;
         float    phi   ;

@@ -167,6 +167,7 @@ void Mixer::overlapHits(HGCSimEvent& event)
             hit.sector    = event.hit_sector->at(h);
             hit.subsector = event.hit_subsector->at(h);
             hit.layer     = event.hit_layer->at(h);
+            hit.zside     = event.hit_zside->at(h);
             hit.energy    = event.hit_energy->at(h);
             hit.eta       = event.hit_eta->at(h);
             hit.phi       = event.hit_phi->at(h);
@@ -226,6 +227,7 @@ void Mixer::fill()
         m_mixedEvent.hit_sector   ->push_back(hit.sector);
         m_mixedEvent.hit_subsector->push_back(hit.subsector);
         m_mixedEvent.hit_layer    ->push_back(hit.layer);
+        m_mixedEvent.hit_zside    ->push_back(hit.zside);
         m_mixedEvent.hit_energy   ->push_back(hit.energy);
         m_mixedEvent.hit_eta      ->push_back(hit.eta);
         m_mixedEvent.hit_phi      ->push_back(hit.phi);
@@ -240,6 +242,7 @@ void Mixer::fill()
     m_mixedEvent.hit_sector   ->resize(m_mixedEvent.hit_n);
     m_mixedEvent.hit_subsector->resize(m_mixedEvent.hit_n);
     m_mixedEvent.hit_layer    ->resize(m_mixedEvent.hit_n);
+    m_mixedEvent.hit_zside    ->resize(m_mixedEvent.hit_n);
     m_mixedEvent.hit_energy   ->resize(m_mixedEvent.hit_n);
     m_mixedEvent.hit_eta      ->resize(m_mixedEvent.hit_n);
     m_mixedEvent.hit_phi      ->resize(m_mixedEvent.hit_n);
@@ -295,6 +298,7 @@ void Mixer::clean()
     m_mixedEvent.hit_sector   ->clear();
     m_mixedEvent.hit_subsector->clear();
     m_mixedEvent.hit_layer    ->clear();
+    m_mixedEvent.hit_zside    ->clear();
     m_mixedEvent.hit_energy   ->clear();
     m_mixedEvent.hit_x        ->clear();
     m_mixedEvent.hit_y        ->clear();
@@ -321,6 +325,7 @@ void Mixer::branch()
     m_mixedEvent.hit_sector    = 0;
     m_mixedEvent.hit_subsector = 0;
     m_mixedEvent.hit_layer     = 0;
+    m_mixedEvent.hit_zside     = 0;
     m_mixedEvent.hit_energy    = 0;
     m_mixedEvent.hit_x         = 0;
     m_mixedEvent.hit_y         = 0;
@@ -334,6 +339,7 @@ void Mixer::branch()
     m_hardScatterEvent.hit_sector    = 0;
     m_hardScatterEvent.hit_subsector = 0;
     m_hardScatterEvent.hit_layer     = 0;
+    m_hardScatterEvent.hit_zside     = 0;
     m_hardScatterEvent.hit_energy    = 0;
     m_hardScatterEvent.hit_x         = 0;
     m_hardScatterEvent.hit_y         = 0;
@@ -360,6 +366,7 @@ void Mixer::branch()
     m_hardScatterChain->SetBranchAddress("hit_cell"     , &m_hardScatterEvent.hit_cell);
     m_hardScatterChain->SetBranchAddress("hit_subdet"   , &m_hardScatterEvent.hit_subdet);
     m_hardScatterChain->SetBranchAddress("hit_layer"    , &m_hardScatterEvent.hit_layer);
+    m_hardScatterChain->SetBranchAddress("hit_zside"    , &m_hardScatterEvent.hit_zside);
     m_hardScatterChain->SetBranchAddress("hit_sector"   , &m_hardScatterEvent.hit_sector);
     m_hardScatterChain->SetBranchAddress("hit_subsector", &m_hardScatterEvent.hit_subsector);
     m_hardScatterChain->SetBranchAddress("hit_energy"   , &m_hardScatterEvent.hit_energy);
@@ -387,6 +394,7 @@ void Mixer::branch()
     m_minBiasChain->SetBranchAddress("hit_cell"     , &m_minBiasEvent.hit_cell);
     m_minBiasChain->SetBranchAddress("hit_subdet"   , &m_minBiasEvent.hit_subdet);
     m_minBiasChain->SetBranchAddress("hit_layer"    , &m_minBiasEvent.hit_layer);
+    m_minBiasChain->SetBranchAddress("hit_zside"    , &m_minBiasEvent.hit_zside);
     m_minBiasChain->SetBranchAddress("hit_sector"   , &m_minBiasEvent.hit_sector);
     m_minBiasChain->SetBranchAddress("hit_subsector", &m_minBiasEvent.hit_subsector);
     m_minBiasChain->SetBranchAddress("hit_energy"   , &m_minBiasEvent.hit_energy);
@@ -415,6 +423,7 @@ void Mixer::branch()
     m_outputTree->Branch("hit_subdet"   , &m_mixedEvent.hit_subdet);
     m_outputTree->Branch("hit_cell"     , &m_mixedEvent.hit_cell   );
     m_outputTree->Branch("hit_layer"    , &m_mixedEvent.hit_layer );
+    m_outputTree->Branch("hit_zside"    , &m_mixedEvent.hit_zside );
     m_outputTree->Branch("hit_sector"   , &m_mixedEvent.hit_sector);
     m_outputTree->Branch("hit_subsector", &m_mixedEvent.hit_subsector);
     m_outputTree->Branch("hit_energy"   , &m_mixedEvent.hit_energy);
@@ -429,6 +438,7 @@ void Mixer::branch()
     m_outputTree->Branch("hard_hit_subdet"   , &m_hardScatterEvent.hit_subdet  );
     m_outputTree->Branch("hard_hit_cell"     , &m_hardScatterEvent.hit_cell   );
     m_outputTree->Branch("hard_hit_layer"    , &m_hardScatterEvent.hit_layer );
+    m_outputTree->Branch("hard_hit_zside"    , &m_hardScatterEvent.hit_zside );
     m_outputTree->Branch("hard_hit_sector"   , &m_hardScatterEvent.hit_sector   );
     m_outputTree->Branch("hard_hit_subsector", &m_hardScatterEvent.hit_subsector   );
     m_outputTree->Branch("hard_hit_energy"   , &m_hardScatterEvent.hit_energy);
