@@ -51,7 +51,7 @@ namespace PileupMixing
         std::vector<float> *gen_pt   ;
         std::vector<float> *gen_energy;
         int   hit_n;
-        std::vector<unsigned> *hit_detid ;
+        std::vector<uint32_t> *hit_detid ;
         std::vector<int>      *hit_subdet;
         std::vector<int>      *hit_cell  ;
         std::vector<int>      *hit_sector;
@@ -79,7 +79,7 @@ namespace PileupMixing
 
     struct HGCSimHit
     {
-        unsigned detid ;
+        uint32_t detid ;
         int      subdet;
         int      cell  ;
         int      sector;
@@ -122,7 +122,7 @@ namespace PileupMixing
             ParReader m_reader;
             TRandom3 m_random;
             std::set<Long64_t> m_mixedEvents;
-            std::map<unsigned, HGCSimHit> m_hits;
+            std::map<uint32_t, HGCSimHit> m_hits;
             std::vector<HGCSimGen> m_gens;
 
             // tree variables

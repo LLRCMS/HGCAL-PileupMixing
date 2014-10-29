@@ -155,13 +155,19 @@ void Mixer::overlapHits(HGCSimEvent& event)
     int nHits = event.hit_n;
     for(int h=0; h<nHits; h++)
     {
-        unsigned detid = event.hit_detid->at(h);
+        uint32_t detid = event.hit_detid->at(h);
+        //int z = (event.hit_zside->at(h)==-1 ? 0 : 1);
+        //int l = event.hit_layer->at(h)-1;
+        //int s = event.hit_sector->at(h)-1;
+        //int ss = (event.hit_subsector->at(h)==-1 ? 0 : 1);
+        //int c = event.hit_cell->at(h);
+        //unsigned detid = (unsigned)(c + ss*2400 + s*4800 + l*86400 + z*2592000);
         auto itrHit = m_hits.find(detid);
         if(itrHit==m_hits.end())
         {
             // create new hit
             HGCSimHit hit;
-            hit.detid     = detid;
+            hit.detid     = event.hit_detid->at(h);//detid;
             hit.cell      = event.hit_cell->at(h);
             hit.subdet    = event.hit_subdet->at(h);
             hit.sector    = event.hit_sector->at(h);
