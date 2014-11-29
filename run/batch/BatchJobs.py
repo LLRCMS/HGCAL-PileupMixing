@@ -19,6 +19,7 @@ class BatchJobs:
         self.nPileup = 200
         self.nJobs = 0
         self.randomSeed = 739397
+        self.hitEnergyThreshold = 0.
 
         self.scram_arch = "slc6_amd64_gcc472"
         self.cmsswDir = "/home/llr/cms/sauvan/CMSSW/EmptyArea/CMSSW_5_3_5/"
@@ -53,6 +54,7 @@ class BatchJobs:
                 print >>config, "LastEntry: {0}".format(lastEntry)
                 print >>config, "NPileup: {0}".format(self.nPileup)
                 print >>config, "RandomSeed: {0}".format(self.randomSeed+101*job)
+                print >>config, "HitEnergyThreshold: {0}".format(self.hitEnergyThreshold)
 
 
     def createScripts(self):
