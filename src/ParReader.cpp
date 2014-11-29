@@ -34,7 +34,8 @@ ParReader::ParReader():m_hardScatterFile(""),
     m_firstEntry(0),
     m_lastEntry(-1),
     m_nPileup(200),
-    m_randomSeed(123456)
+    m_randomSeed(123456),
+    m_hitEnergyThreshold(0.)
 /*****************************************************************/
 {
 }
@@ -51,14 +52,15 @@ bool ParReader::read(const std::string& parFileName)
         return false;
     }
 
-    m_hardScatterFile = m_params.GetValue("HardScatterFile", "");
-    m_minBiasFile     = m_params.GetValue("MinBiasFile", "");
-    m_outputFile      = m_params.GetValue("OutputFile", "dummy.root");
-    m_tree            = m_params.GetValue("Tree", "dummyTree");
-    m_firstEntry      = m_params.GetValue("FirstEntry", 0);
-    m_lastEntry       = m_params.GetValue("LastEntry", -1);
-    m_nPileup         = m_params.GetValue("NPileup", 200);
-    m_randomSeed      = m_params.GetValue("RandomSeed", 123456);
+    m_hardScatterFile    = m_params.GetValue("HardScatterFile", "");
+    m_minBiasFile        = m_params.GetValue("MinBiasFile", "");
+    m_outputFile         = m_params.GetValue("OutputFile", "dummy.root");
+    m_tree               = m_params.GetValue("Tree", "dummyTree");
+    m_firstEntry         = m_params.GetValue("FirstEntry", 0);
+    m_lastEntry          = m_params.GetValue("LastEntry", -1);
+    m_nPileup            = m_params.GetValue("NPileup", 200);
+    m_randomSeed         = m_params.GetValue("RandomSeed", 123456);
+    m_hitEnergyThreshold = m_params.GetValue("HitEnergyThreshold", 0.);
 
     return true;
 }

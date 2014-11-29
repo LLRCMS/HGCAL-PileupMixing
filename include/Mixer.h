@@ -52,12 +52,12 @@ namespace PileupMixing
         std::vector<float> *gen_energy;
         int   hit_n;
         std::vector<uint32_t> *hit_detid ;
-        std::vector<int>      *hit_subdet;
-        std::vector<int>      *hit_cell  ;
-        std::vector<int>      *hit_sector;
-        std::vector<int>      *hit_subsector;
-        std::vector<int>      *hit_layer ;
-        std::vector<int>      *hit_zside;
+        std::vector<uint8_t>  *hit_subdet;
+        std::vector<uint16_t> *hit_cell  ;
+        std::vector<uint8_t>  *hit_sector;
+        std::vector<char>     *hit_subsector;
+        std::vector<uint8_t>  *hit_layer ;
+        std::vector<char>     *hit_zside;
         std::vector<float>    *hit_energy;
         std::vector<float>    *hit_eta   ;
         std::vector<float>    *hit_phi   ;
@@ -80,12 +80,12 @@ namespace PileupMixing
     struct HGCSimHit
     {
         uint32_t detid ;
-        int      subdet;
-        int      cell  ;
-        int      sector;
-        int      subsector;
-        int      layer ;
-        int      zside;
+        uint8_t  subdet;
+        uint16_t cell  ;
+        uint8_t  sector;
+        char     subsector;
+        uint8_t  layer ;
+        char     zside;
         float    energy;
         float    eta   ;
         float    phi   ;

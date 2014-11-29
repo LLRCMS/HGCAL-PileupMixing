@@ -45,6 +45,7 @@ namespace PileupMixing
             int lastEntry() {return m_lastEntry;}
             int nPileup(){return m_nPileup;}
             int randomSeed(){return m_randomSeed;}
+            int hitEnergyThreshold(){return m_hitEnergyThreshold;}
 
             TEnv& params() {return m_params;}
 
@@ -58,6 +59,7 @@ namespace PileupMixing
             int m_lastEntry;
             int m_nPileup;
             int m_randomSeed;
+            float m_hitEnergyThreshold;
     };
 
 }

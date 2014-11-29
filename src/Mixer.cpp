@@ -222,9 +222,12 @@ void Mixer::fill()
     m_mixedEvent.hit_n = 0;
     m_mixedEvent.gen_n = 0;
 
+    const double mip = 0.000055;
+
     for(auto itrHit=m_hits.begin(); itrHit!=m_hits.end(); ++itrHit)
     {
         const HGCSimHit& hit = itrHit->second;
+        if(hit.energy<=m_reader.hitEnergyThreshold()*mip) continue;
 
         m_mixedEvent.hit_n++;
         m_mixedEvent.hit_detid    ->push_back(hit.detid);
