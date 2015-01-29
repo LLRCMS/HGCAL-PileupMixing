@@ -209,6 +209,34 @@ void Mixer::overlapGen(HGCSimEvent& event)
         gen.energy = event.gen_energy->at(g);
         m_gens.push_back(gen);
     }
+    //
+    int nGenJets = event.genjet_n;
+    for(int g=0; g<nGenJets; g++)
+    {
+        // create new gen jet
+        HGCSimGenJet genjet;
+        genjet.energy    = event.genjet_energy->at(g);
+        genjet.emenergy  = event.genjet_emenergy->at(g);
+        genjet.hadenergy = event.genjet_hadenergy->at(g);
+        genjet.invenergy = event.genjet_invenergy->at(g);
+        genjet.pt        = event.genjet_pt->at(g);
+        genjet.eta       = event.genjet_eta->at(g);
+        genjet.phi       = event.genjet_phi->at(g);
+        m_genjets.push_back(genjet);
+    }
+    //
+    int nGenTaus = event.gentau_n;
+    for(int g=0; g<nGenTaus; g++)
+    {
+        // create new gen jet
+        HGCSimGenTau gentau;
+        gentau.energy    = event.gentau_energy->at(g);
+        gentau.pt        = event.gentau_pt->at(g);
+        gentau.eta       = event.gentau_eta->at(g);
+        gentau.phi       = event.gentau_phi->at(g);
+        gentau.decay     = event.gentau_decay->at(g);
+        m_gentaus.push_back(gentau);
+    }
 }
 
 
@@ -221,6 +249,8 @@ void Mixer::fill()
     m_mixedEvent.lumi  = m_hardScatterEvent.lumi;
     m_mixedEvent.hit_n = 0;
     m_mixedEvent.gen_n = 0;
+    m_mixedEvent.genjet_n = 0;
+    m_mixedEvent.gentau_n = 0;
 
     const double mip = 0.000055;
 
@@ -245,19 +275,7 @@ void Mixer::fill()
         m_mixedEvent.hit_z        ->push_back(hit.z);
 
     }
-    m_mixedEvent.hit_detid    ->resize(m_mixedEvent.hit_n);
-    m_mixedEvent.hit_cell     ->resize(m_mixedEvent.hit_n);
-    m_mixedEvent.hit_subdet   ->resize(m_mixedEvent.hit_n);
-    m_mixedEvent.hit_sector   ->resize(m_mixedEvent.hit_n);
-    m_mixedEvent.hit_subsector->resize(m_mixedEvent.hit_n);
-    m_mixedEvent.hit_layer    ->resize(m_mixedEvent.hit_n);
-    m_mixedEvent.hit_zside    ->resize(m_mixedEvent.hit_n);
-    m_mixedEvent.hit_energy   ->resize(m_mixedEvent.hit_n);
-    m_mixedEvent.hit_eta      ->resize(m_mixedEvent.hit_n);
-    m_mixedEvent.hit_phi      ->resize(m_mixedEvent.hit_n);
-    m_mixedEvent.hit_x        ->resize(m_mixedEvent.hit_n);
-    m_mixedEvent.hit_y        ->resize(m_mixedEvent.hit_n);
-    m_mixedEvent.hit_z        ->resize(m_mixedEvent.hit_n);
+
 
 
     for(auto itrGen=m_gens.begin(); itrGen!=m_gens.end(); ++itrGen)
@@ -271,12 +289,30 @@ void Mixer::fill()
         m_mixedEvent.gen_pt    ->push_back(gen.pt);
         m_mixedEvent.gen_energy->push_back(gen.energy);
     }
-    m_mixedEvent.gen_id    ->resize(m_mixedEvent.gen_n);
-    m_mixedEvent.gen_status->resize(m_mixedEvent.gen_n);
-    m_mixedEvent.gen_eta   ->resize(m_mixedEvent.gen_n);
-    m_mixedEvent.gen_phi   ->resize(m_mixedEvent.gen_n);
-    m_mixedEvent.gen_pt    ->resize(m_mixedEvent.gen_n);
-    m_mixedEvent.gen_energy->resize(m_mixedEvent.gen_n);
+    //
+    for(auto itrGenJet=m_genjets.begin(); itrGenJet!=m_genjets.end(); ++itrGenJet)
+    {
+        const HGCSimGenJet& genjet = *itrGenJet;
+        m_mixedEvent.genjet_n++;
+        m_mixedEvent.genjet_energy   ->push_back(genjet.energy);
+        m_mixedEvent.genjet_emenergy ->push_back(genjet.emenergy);
+        m_mixedEvent.genjet_hadenergy->push_back(genjet.hadenergy);
+        m_mixedEvent.genjet_invenergy->push_back(genjet.invenergy);
+        m_mixedEvent.genjet_pt       ->push_back(genjet.pt);
+        m_mixedEvent.genjet_eta      ->push_back(genjet.eta);
+        m_mixedEvent.genjet_phi      ->push_back(genjet.phi);
+    }
+    //
+    for(auto itrGenTau=m_gentaus.begin(); itrGenTau!=m_gentaus.end(); ++itrGenTau)
+    {
+        const HGCSimGenTau& gentau = *itrGenTau;
+        m_mixedEvent.gentau_n++;
+        m_mixedEvent.gentau_energy   ->push_back(gentau.energy);
+        m_mixedEvent.gentau_pt       ->push_back(gentau.pt);
+        m_mixedEvent.gentau_eta      ->push_back(gentau.eta);
+        m_mixedEvent.gentau_phi      ->push_back(gentau.phi);
+        m_mixedEvent.gentau_decay    ->push_back(gentau.decay);
+    }
 
     m_outputTree->Fill();
 }
@@ -289,17 +325,37 @@ void Mixer::clean()
     m_mixedEvents.clear();
     m_hits.clear();
     m_gens.clear();
-    m_mixedEvent.event = 0;
-    m_mixedEvent.lumi  = 0;
-    m_mixedEvent.run   = 0;
-    m_mixedEvent.gen_n = 0;
-    m_mixedEvent.hit_n = 0;
+    m_genjets.clear();
+    m_gentaus.clear();
+
+    m_mixedEvent.event    = 0;
+    m_mixedEvent.lumi     = 0;
+    m_mixedEvent.run      = 0;
+    m_mixedEvent.gen_n    = 0;
+    m_mixedEvent.genjet_n = 0;
+    m_mixedEvent.gentau_n = 0;
+    m_mixedEvent.hit_n    = 0;
+
     m_mixedEvent.gen_id    ->clear();
     m_mixedEvent.gen_status->clear();
     m_mixedEvent.gen_eta   ->clear();
     m_mixedEvent.gen_phi   ->clear();
     m_mixedEvent.gen_pt    ->clear();
     m_mixedEvent.gen_energy->clear();
+
+    m_mixedEvent.genjet_energy   ->clear();
+    m_mixedEvent.genjet_emenergy ->clear();
+    m_mixedEvent.genjet_hadenergy->clear();
+    m_mixedEvent.genjet_invenergy->clear();
+    m_mixedEvent.genjet_pt       ->clear();
+    m_mixedEvent.genjet_eta      ->clear();
+    m_mixedEvent.genjet_phi      ->clear();
+
+    m_mixedEvent.gentau_energy   ->clear();
+    m_mixedEvent.gentau_pt       ->clear();
+    m_mixedEvent.gentau_eta      ->clear();
+    m_mixedEvent.gentau_phi      ->clear();
+    m_mixedEvent.gentau_decay    ->clear();
 
     m_mixedEvent.hit_detid    ->clear();
     m_mixedEvent.hit_subdet   ->clear();
@@ -327,6 +383,20 @@ void Mixer::branch()
     m_mixedEvent.gen_phi       = 0;
     m_mixedEvent.gen_pt        = 0;
     m_mixedEvent.gen_energy    = 0;
+    //
+    m_mixedEvent.genjet_energy    = 0;
+    m_mixedEvent.genjet_emenergy  = 0;
+    m_mixedEvent.genjet_hadenergy = 0;
+    m_mixedEvent.genjet_invenergy = 0;
+    m_mixedEvent.genjet_pt        = 0;
+    m_mixedEvent.genjet_eta       = 0;
+    m_mixedEvent.genjet_phi       = 0;
+    //
+    m_mixedEvent.gentau_energy    = 0;
+    m_mixedEvent.gentau_pt        = 0;
+    m_mixedEvent.gentau_eta       = 0;
+    m_mixedEvent.gentau_phi       = 0;
+    m_mixedEvent.gentau_decay     = 0;
     //
     m_mixedEvent.hit_detid     = 0;
     m_mixedEvent.hit_subdet    = 0;
@@ -370,6 +440,22 @@ void Mixer::branch()
     m_hardScatterChain->SetBranchAddress("gen_pt"    , &m_hardScatterEvent.gen_pt);
     m_hardScatterChain->SetBranchAddress("gen_energy", &m_hardScatterEvent.gen_energy);
 
+    m_hardScatterChain->SetBranchAddress("genjet_n"        , &m_hardScatterEvent.genjet_n);
+    m_hardScatterChain->SetBranchAddress("genjet_energy"   , &m_hardScatterEvent.genjet_energy);
+    m_hardScatterChain->SetBranchAddress("genjet_emenergy" , &m_hardScatterEvent.genjet_emenergy);
+    m_hardScatterChain->SetBranchAddress("genjet_hadenergy", &m_hardScatterEvent.genjet_hadenergy);
+    m_hardScatterChain->SetBranchAddress("genjet_invenergy", &m_hardScatterEvent.genjet_invenergy);
+    m_hardScatterChain->SetBranchAddress("genjet_pt"       , &m_hardScatterEvent.genjet_pt);
+    m_hardScatterChain->SetBranchAddress("genjet_eta"      , &m_hardScatterEvent.genjet_eta);
+    m_hardScatterChain->SetBranchAddress("genjet_phi"      , &m_hardScatterEvent.genjet_phi);
+
+    m_hardScatterChain->SetBranchAddress("gentau_n"        , &m_hardScatterEvent.gentau_n);
+    m_hardScatterChain->SetBranchAddress("gentau_energy"   , &m_hardScatterEvent.gentau_energy);
+    m_hardScatterChain->SetBranchAddress("gentau_pt"       , &m_hardScatterEvent.gentau_pt);
+    m_hardScatterChain->SetBranchAddress("gentau_eta"      , &m_hardScatterEvent.gentau_eta);
+    m_hardScatterChain->SetBranchAddress("gentau_phi"      , &m_hardScatterEvent.gentau_phi);
+    m_hardScatterChain->SetBranchAddress("gentau_decay"    , &m_hardScatterEvent.gentau_decay);
+
     m_hardScatterChain->SetBranchAddress("hit_n"        , &m_hardScatterEvent.hit_n);
     m_hardScatterChain->SetBranchAddress("hit_detid"    , &m_hardScatterEvent.hit_detid);
     m_hardScatterChain->SetBranchAddress("hit_cell"     , &m_hardScatterEvent.hit_cell);
@@ -397,6 +483,22 @@ void Mixer::branch()
     m_minBiasChain->SetBranchAddress("gen_phi"   , &m_minBiasEvent.gen_phi);
     m_minBiasChain->SetBranchAddress("gen_pt"    , &m_minBiasEvent.gen_pt);
     m_minBiasChain->SetBranchAddress("gen_energy", &m_minBiasEvent.gen_energy);
+
+    m_minBiasChain->SetBranchAddress("genjet_n"        , &m_minBiasEvent.genjet_n);
+    m_minBiasChain->SetBranchAddress("genjet_energy"   , &m_minBiasEvent.genjet_energy);
+    m_minBiasChain->SetBranchAddress("genjet_emenergy" , &m_minBiasEvent.genjet_emenergy);
+    m_minBiasChain->SetBranchAddress("genjet_hadenergy", &m_minBiasEvent.genjet_hadenergy);
+    m_minBiasChain->SetBranchAddress("genjet_invenergy", &m_minBiasEvent.genjet_invenergy);
+    m_minBiasChain->SetBranchAddress("genjet_pt"       , &m_minBiasEvent.genjet_pt);
+    m_minBiasChain->SetBranchAddress("genjet_eta"      , &m_minBiasEvent.genjet_eta);
+    m_minBiasChain->SetBranchAddress("genjet_phi"      , &m_minBiasEvent.genjet_phi);
+
+    m_minBiasChain->SetBranchAddress("gentau_n"        , &m_minBiasEvent.gentau_n);
+    m_minBiasChain->SetBranchAddress("gentau_energy"   , &m_minBiasEvent.gentau_energy);
+    m_minBiasChain->SetBranchAddress("gentau_pt"       , &m_minBiasEvent.gentau_pt);
+    m_minBiasChain->SetBranchAddress("gentau_eta"      , &m_minBiasEvent.gentau_eta);
+    m_minBiasChain->SetBranchAddress("gentau_phi"      , &m_minBiasEvent.gentau_phi);
+    m_minBiasChain->SetBranchAddress("gentau_decay"    , &m_minBiasEvent.gentau_decay);
 
     m_minBiasChain->SetBranchAddress("hit_n"        , &m_minBiasEvent.hit_n);
     m_minBiasChain->SetBranchAddress("hit_detid"    , &m_minBiasEvent.hit_detid);
@@ -426,6 +528,22 @@ void Mixer::branch()
     m_outputTree->Branch("gen_phi"   ,  &m_mixedEvent.gen_phi   );
     m_outputTree->Branch("gen_pt"    ,  &m_mixedEvent.gen_pt    );
     m_outputTree->Branch("gen_energy",  &m_mixedEvent.gen_energy);
+
+    m_outputTree->Branch("genjet_n"        , &m_mixedEvent.genjet_n     , "genjet_n/I");
+    m_outputTree->Branch("genjet_energy"   , &m_mixedEvent.genjet_energy);
+    m_outputTree->Branch("genjet_emenergy" , &m_mixedEvent.genjet_emenergy);
+    m_outputTree->Branch("genjet_hadenergy", &m_mixedEvent.genjet_hadenergy);
+    m_outputTree->Branch("genjet_invenergy", &m_mixedEvent.genjet_invenergy);
+    m_outputTree->Branch("genjet_pt"       , &m_mixedEvent.genjet_pt);
+    m_outputTree->Branch("genjet_eta"      , &m_mixedEvent.genjet_eta);
+    m_outputTree->Branch("genjet_phi"      , &m_mixedEvent.genjet_phi);
+
+    m_outputTree->Branch("gentau_n"        , &m_mixedEvent.gentau_n     , "gentau_n/I");
+    m_outputTree->Branch("gentau_energy"   , &m_mixedEvent.gentau_energy);
+    m_outputTree->Branch("gentau_pt"       , &m_mixedEvent.gentau_pt);
+    m_outputTree->Branch("gentau_eta"      , &m_mixedEvent.gentau_eta);
+    m_outputTree->Branch("gentau_phi"      , &m_mixedEvent.gentau_phi);
+    m_outputTree->Branch("gentau_decay"    , &m_mixedEvent.gentau_decay);
 
     m_outputTree->Branch("hit_n"        , &m_mixedEvent.hit_n     , "hit_n/I");
     m_outputTree->Branch("hit_detid"    , &m_mixedEvent.hit_detid);

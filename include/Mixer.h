@@ -43,6 +43,7 @@ namespace PileupMixing
     struct HGCSimEvent 
     { 
         int   event, lumi, run, npu;
+        //
         int   gen_n;
         std::vector<int>   *gen_id    ;
         std::vector<int>   *gen_status;
@@ -50,6 +51,23 @@ namespace PileupMixing
         std::vector<float> *gen_phi   ;
         std::vector<float> *gen_pt   ;
         std::vector<float> *gen_energy;
+        //
+        int genjet_n;
+        std::vector<float> *genjet_energy;
+        std::vector<float> *genjet_emenergy;
+        std::vector<float> *genjet_hadenergy;
+        std::vector<float> *genjet_invenergy;
+        std::vector<float> *genjet_pt;
+        std::vector<float> *genjet_eta;
+        std::vector<float> *genjet_phi;
+        //
+        int gentau_n;
+        std::vector<float> *gentau_energy;
+        std::vector<float> *gentau_pt;
+        std::vector<float> *gentau_eta;
+        std::vector<float> *gentau_phi;
+        std::vector<int>   *gentau_decay;
+        //
         int   hit_n;
         std::vector<uint32_t> *hit_detid ;
         std::vector<uint8_t>  *hit_subdet;
@@ -75,6 +93,26 @@ namespace PileupMixing
         float phi  ;
         float pt  ;
         float energy;
+    } ;
+
+    struct HGCSimGenJet
+    {
+        float energy;
+        float emenergy;
+        float hadenergy;
+        float invenergy;
+        float pt;
+        float eta;
+        float phi;
+    } ;
+
+    struct HGCSimGenTau
+    {
+        float energy;
+        float pt;
+        float eta;
+        float phi;
+        int   decay;
     } ;
 
     struct HGCSimHit
@@ -124,6 +162,8 @@ namespace PileupMixing
             std::set<Long64_t> m_mixedEvents;
             std::map<uint32_t, HGCSimHit> m_hits;
             std::vector<HGCSimGen> m_gens;
+            std::vector<HGCSimGenJet> m_genjets;
+            std::vector<HGCSimGenTau> m_gentaus;
 
             // tree variables
             HGCSimEvent m_hardScatterEvent;
