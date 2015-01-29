@@ -252,11 +252,28 @@ void Mixer::fill()
     m_mixedEvent.genjet_n = 0;
     m_mixedEvent.gentau_n = 0;
 
-    const double mip = 0.000055;
+    const double mip_EH = 0.000055;
+    const double mip_FH = 0.000085;
+    const double mip_BH = 0.0014984;
 
     for(auto itrHit=m_hits.begin(); itrHit!=m_hits.end(); ++itrHit)
     {
         const HGCSimHit& hit = itrHit->second;
+        double mip = mip_EH;
+        switch(hit.subdet)
+        {
+            case 3:
+                mip = mip_EH;
+                break;
+            case 4:
+                mip = mip_FH;
+                break;
+            case 5:
+                mip = mip_BH;
+                break;
+            default:
+                break;
+        }
         if(hit.energy<=m_reader.hitEnergyThreshold()*mip) continue;
 
         m_mixedEvent.hit_n++;
